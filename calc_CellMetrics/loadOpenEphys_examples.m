@@ -1,4 +1,4 @@
-basepath = '/Path/To/Your/Data/basename';
+basepath = 'N:\SUN-IN-Petersen-lab\data\JuliaCzurylo\JP01\JP01_2024-09-17_10-53-24';
 
 basename = basenameFromBasepath(basepath);
 cd(basepath)
@@ -90,7 +90,7 @@ spikes = loadSpikes('session',session);
 
 % A figure for each unit showing the X,Y position of the spikes
 for unit1 = 1:spikes.numcells
-    spikes.position_x{unit1} = interp1(circular_track.timestamps,circular_track.position.x,spikes.times{unit1},'linear');
+    spikes.position_x{unit1} = interp1(   9circular_track.timestamps,circular_track.position.x,spikes.times{unit1},'linear');
     spikes.position_y{unit1} = interp1(circular_track.timestamps,circular_track.position.y,spikes.times{unit1},'linear');
     
     figure
