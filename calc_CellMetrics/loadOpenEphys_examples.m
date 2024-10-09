@@ -1,4 +1,4 @@
-basepath = 'N:\SUN-IN-Petersen-lab\data\JuliaCzurylo\JP01\JP01_2024-09-17_10-53-24';
+basepath = 'N:\SUN-IN-Petersen-lab\data\JuliaCzurylo\JP01\JP01_2024-09-26_12-08-48';
 
 basename = basenameFromBasepath(basepath);
 cd(basepath)
@@ -10,12 +10,16 @@ session = preprocessOpenEphysData('session',session,'showGUI',true);
 
 %% Load OpenEphys Settings File
 
-session = loadOpenEphysSettingsFile(session);
+session = loadOpenEphysSettingsFile(fullfile(session.general.basePath, 'structure.oebin'), session);
 saveStruct(session);
 
 %% Load digital pulses
 
 openephysDig = loadOpenEphysDigital(session);
+
+%% Load behavioralTracking manually
+gui_session
+session = loadSession();
 
 %% Behavior processing
 scaling_factor = 0.5;

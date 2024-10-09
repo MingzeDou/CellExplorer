@@ -68,28 +68,28 @@ function session = preprocessOpenEphysData(varargin)
     
     
     % 5. Merge dat files to single binary .dat file in basepath
-    if parameters.processData
-
-        disp('Attempting to concatenate binary files with spiking data.')
-        outputFile = fullfile(basepath,[session.general.name,'.dat']);
-        binaryMergeWrapper(inputFiles, outputFile)
+    % if parameters.processData
+    % 
+    %     disp('Attempting to concatenate binary files with spiking data.')
+    %     outputFile = fullfile(basepath,[session.general.name,'.dat']);
+    %     binaryMergeWrapper(inputFiles, outputFile)
 
         % 6. Merge lfp files
-        inputFiles_lfp = {};
-        for i = 1:numel(session.epochs)
-            if exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.bin'),'file')
-                inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.bin');
-            elseif exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.dat'),'file')
-                inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.dat');
-            else
-                inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA-LFP','continuous.dat');
-            end
-        end
-        outputFile_lfp = fullfile(basepath,[session.general.name,'.lfp']);
-
-
-        disp('Attempting to concatenate binary LFP files.')
-        binaryMergeWrapper(inputFiles_lfp, outputFile_lfp)
+        % inputFiles_lfp = {};
+        % for i = 1:numel(session.epochs)
+        %     if exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.bin'),'file')
+        %         inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.bin');
+        %     elseif exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.dat'),'file')
+        %         inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.1','continuous.dat');
+        %     else
+        %         inputFiles_lfp{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA-LFP','continuous.dat');
+        %     end
+        % end
+        % outputFile_lfp = fullfile(basepath,[session.general.name,'.lfp']);
+        % 
+        % 
+        % disp('Attempting to concatenate binary LFP files.')
+        % binaryMergeWrapper(inputFiles_lfp, outputFile_lfp)
 
 
         % 7. Merge digital timeseries
@@ -104,7 +104,7 @@ function session = preprocessOpenEphysData(varargin)
         subFolderNames = {subFolders(3:end).name}; % Get only the folder names into a cell array.  Start at 3 to skip . and ..
         subFolderNames = subFolderNames(contains(subFolderNames,folderstring));
     end    
-end
+% end
 
 
 %% Local functions

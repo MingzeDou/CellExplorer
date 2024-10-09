@@ -166,7 +166,8 @@ end
 if parameters.plotFig
     fig1 = figure;
     subplot(1,2,1)
-    plot3(position3D(:,1),position3D(:,2),position3D(:,3)), title('Position'), xlabel('X (cm)'), ylabel('Y (cm)'), zlabel('Z (cm)'),axis tight,view(2), hold on
+    % plot3(position3D(:,1),position3D(:,2),position3D(:,3)), title('Position'), xlabel('X (cm)'), ylabel('Y (cm)'), zlabel('Z (cm)'),axis tight, view(2), hold on
+    plot3(position3D(:,1),position3D(:,2),position3D(:,3)), title('Position'), xlabel('X (cm)'), ylabel('Y (cm)'), zlabel('Z (cm)'),axis tight, hold on
     subplot(1,2,2)
     plot3(position3D(:,1),position3D(:,2),animal_speed), hold on
     xlabel('X (cm)'), ylabel('Y (cm)'),zlabel('Speed (cm/s)'), axis tight
