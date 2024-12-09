@@ -69,7 +69,7 @@ function session = preprocessOpenEphysData(varargin)
     % 5. Merge dat files to single binary .dat file in basepath
     if parameters.processData
         disp('Attempting to concatenate binary files with spiking data.')
-        outputFile = fullfile(basepath,[session.general.name, '_Probe', parameters.probeLetter, '.dat']);
+        outputFile = fullfile(basepath,[session.general.name, '.dat']);
         binaryMergeWrapper(inputFiles, outputFile)
     end
 
