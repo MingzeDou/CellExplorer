@@ -51,14 +51,12 @@ function session = preprocessOpenEphysData(varargin)
     session = loadOpenEphysSettingsFile(file1, session, 'probeLetter', parameters.probeLetter);
 
     % 3. Epoch durations
-    [session,inputFiles] = calculateEpochDurations(session,basepath);
+    [session,inputFiles] = calculateEpochDurations(session, basepath, parameters.probeLetter);
 
-    % Shows session GUI if requested by user
+    % Shows session GUI if requested
     if parameters.showGUI
         session = gui_session(session);
-
-        % Calculates epoch durations and inputFiles again in case the number of epochs has changed
-        [session,inputFiles] = calculateEpochDurations(session,basepath);
+        [session,inputFiles] = calculateEpochDurations(session, basepath, parameters.probeLetter);
     end
 
     % 4. Saving session struct
@@ -67,11 +65,11 @@ function session = preprocessOpenEphysData(varargin)
     end
 
     % 5. Merge dat files to single binary .dat file in basepath
-    if parameters.processData
-        disp('Attempting to concatenate binary files with spiking data.')
-        outputFile = fullfile(basepath,[session.general.name, '.dat']);
-        binaryMergeWrapper(inputFiles, outputFile)
-    end
+    % if parameters.processData
+    %     disp('Attempting to concatenate binary files with spiking data.')
+    %     outputFile = fullfile(basepath,[session.general.name, '.dat']);
+    %     binaryMergeWrapper(inputFiles, outputFile)
+    % end
 
     % 6. Merge lfp files
     % inputFiles_lfp = {};
@@ -92,7 +90,7 @@ function session = preprocessOpenEphysData(varargin)
 
 
     % 7. Merge digital timeseries
-    openephysDig = loadOpenEphysDigital(session);
+    % openephysDig = loadOpenEphysDigital(session);
 
 end
 
@@ -198,31 +196,40 @@ end
 totalSize = sum(individualSizes);
 end
 
-function [session,inputFiles] = calculateEpochDurations(session,basepath)
+function [session,inputFiles] = calculateEpochDurations(session, basepath, probeLetter)
     inputFiles = {};
     startTime = 0;
     stopTime = 0;
     nSamples = 0;
+    
     for i = 1:numel(session.epochs)
         session.epochs{i}.startTime = startTime;
-        if exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.bin'),'file')
-            inputFiles{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.bin');
-
-        elseif exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.dat'),'file')
-            inputFiles{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.dat');
         
-        elseif exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA','continuous.dat'),'file')
-            inputFiles{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA','continuous.dat');
-
-        elseif exist(fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA-AP','continuous.dat'),'file')
-            inputFiles{i} = fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.ProbeA-AP','continuous.dat');
-            
-        else
-            error(['Epoch duration could not be estimated as raw data file does not exist: ', inputFiles{i}]);
+        % Define possible file paths
+        possiblePaths = {
+            fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.dat'),
+            fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.bin'),
+            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-100.Probe' probeLetter],'continuous.dat'),
+            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-100.Probe' probeLetter '-AP'],'continuous.dat')
+        };
+        
+        % Check each possible path
+        fileFound = false;
+        for pathIdx = 1:length(possiblePaths)
+            if exist(possiblePaths{pathIdx}, 'file')
+                inputFiles{i} = possiblePaths{pathIdx};
+                fileFound = true;
+                break;
+            end
         end
+        
+        if ~fileFound
+            error(['Epoch duration could not be estimated as raw data file does not exist for Probe' probeLetter ' in epoch ' num2str(i)]);
+        end
+        
         temp = dir(inputFiles{i});
         duration = temp.bytes/session.extracellular.sr/session.extracellular.nChannels/2;
-        stopTime = startTime+duration;
+        stopTime = startTime + duration;
         session.epochs{i}.stopTime = stopTime;
         startTime = stopTime;
         nSamples = nSamples + temp.bytes/session.extracellular.nChannels/2;
