@@ -97,9 +97,9 @@ else
     disp('TTL timestamp file not found')
 end
 if isNewFormat
-    openephysDig.timestamps = epochs_startTime(1) + double(timestamps) - ephys_t0(1);
+    openephysDig.timestamps = epochs_startTime(1) + double(timestamps) - ephys_t0(1); % timestamps in second
 else
-    openephysDig.timestamps = epochs_startTime(1) + double(timestamps)/session.extracellular.sr - ephys_t0(1);
+    openephysDig.timestamps = epochs_startTime(1) + double(timestamps)/session.extracellular.sr - ephys_t0(1); % legacy format
 end
 
 % Check which format to use for first epoch
@@ -128,9 +128,9 @@ if length(TTL_paths) > 1
         timestamps = readNPY(fullfile(basePath,'timestamps.npy'));
         
         if isNewFormat
-            timestamps = epochs_startTime(i) + double(timestamps) - ephys_t0(i);
+            timestamps = epochs_startTime(i) + double(timestamps) - ephys_t0(i); % timestamps in second
         else
-            timestamps = epochs_startTime(i) + double(timestamps)/session.extracellular.sr - ephys_t0(i);
+            timestamps = epochs_startTime(i) + double(timestamps)/session.extracellular.sr - ephys_t0(i); % legacy format
         end
         openephysDig.timestamps = [openephysDig.timestamps; timestamps];
         
@@ -157,7 +157,7 @@ end
 
 % Attaching info about how the data was processed
 openephysDig.processinginfo.function = 'loadOpenEphysDigital';
-openephysDig.processinginfo.version = 2; % Updated version number
+openephysDig.processinginfo.version = 1;
 openephysDig.processinginfo.date = datetime('now');
 openephysDig.processinginfo.params.basepath = session.general.basePath;
 openephysDig.processinginfo.params.basename = session.general.name;
