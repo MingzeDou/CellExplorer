@@ -45,6 +45,7 @@ function session = preprocessOpenEphysData(varargin)
             end
         end
     end
+    saveStruct(session);
     
     % 2. Imports extracellular metadata and Channel coordinates from the first structure.oebin file 
     file1 = fullfile(session.general.basePath,session.epochs{1}.name,'structure.oebin');
@@ -65,11 +66,11 @@ function session = preprocessOpenEphysData(varargin)
     end
 
     % 5. Merge dat files to single binary .dat file in basepath
-    % if parameters.processData
-    %     disp('Attempting to concatenate binary files with spiking data.')
-    %     outputFile = fullfile(basepath,[session.general.name, '.dat']);
-    %     binaryMergeWrapper(inputFiles, outputFile)
-    % end
+    if parameters.processData
+        disp('Attempting to concatenate binary files with spiking data.')
+        outputFile = fullfile(basepath,[session.general.name, '.dat']);
+        binaryMergeWrapper(inputFiles, outputFile)
+    end
 
     % 6. Merge lfp files
     % inputFiles_lfp = {};
@@ -210,7 +211,9 @@ function [session,inputFiles] = calculateEpochDurations(session, basepath, probe
             fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.dat'),
             fullfile(basepath,session.epochs{i}.name,'continuous','Neuropix-PXI-100.0','continuous.bin'),
             fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-100.Probe' probeLetter],'continuous.dat'),
-            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-100.Probe' probeLetter '-AP'],'continuous.dat')
+            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-100.Probe' probeLetter '-AP'],'continuous.dat'),
+            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-103.Probe' probeLetter],'continuous.dat'),
+            fullfile(basepath,session.epochs{i}.name,'continuous',['Neuropix-PXI-103.Probe' probeLetter '-AP'],'continuous.dat'),
         };
         
         % Check each possible path

@@ -1,5 +1,5 @@
 function openephysDig = loadOpenEphysDigitalNidaq(session, varargin)
-% function to load digital inputs from OpenEphys NI-DAQ Board and align the data properly
+% function to load digital inputs from OpenEphys NI-DAQ Board using bitwise operations
 %
 % INPUT
 % session: session struct
@@ -8,11 +8,13 @@ function openephysDig = loadOpenEphysDigitalNidaq(session, varargin)
 %   probeLetter: 'A' or 'B' for specific probe timestamps. If empty, uses ProbeA
 %
 % OUTPUTS
-% openephysDig.on: on-state changes for each channel [in seconds]
-% openephysDig.off: off-state changes for each channel [in seconds]
+% openephysDig.timestamps: timestamps for all events [in seconds]
+% openephysDig.states: corresponding states for each timestamp
+% openephysDig.epochNum: corresponding epoch number for each timestamp
+% openephysDig.on: cell array containing on-state timestamps for the channel
+% openephysDig.off: cell array containing off-state timestamps for the channel
 %
-% By Mingze Dou
-% mingzedou.mail@gmail.com
+% By Mingze Dou (modified version)
 
 p = inputParser;
 addParameter(p,'channelNum', [], @isnumeric);
@@ -20,122 +22,108 @@ addParameter(p,'probeLetter', '', @ischar);
 parse(p,varargin{:});
 parameters = p.Results;
 
-TTL_paths = {};
-epochs_startTime = [];
-ephys_t0 = [];
+% Initialize paths and timestamp arrays
+ttlPaths = {};
+epochsStartTime = [];
+ephysT0 = [];
+validEpochs = [];
 
-% Determine paths and timestamps for each epoch
+% Initialize output structure
+openephysDig.on = {[]};  % Initialize for single channel
+openephysDig.off = {[]};
+openephysDig.timestamps = [];
+openephysDig.states = [];
+openephysDig.epochNum = [];
+
+% First pass: identify valid epochs and collect paths
 for i = 1:numel(session.epochs)
-    TTL_paths{i} = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-105.PXIe-6341', 'TTL');
-    disp(['Checking TTL path for epoch ' num2str(i) ': ' fullfile(session.general.basePath, TTL_paths{i})])
+    ttlPath = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-116.PXIe-6341', 'TTL');
+    fullWordsPath = fullfile(session.general.basePath, ttlPath, 'full_words.npy');
     
-    % Set timestamp path based on probe selection
-    if ~isempty(parameters.probeLetter)
-        probeStr = parameters.probeLetter;
+    if exist(fullWordsPath, 'file')
+        fullWordsTemp = readNPY(fullWordsPath);
+        
+        if ~isempty(parameters.channelNum)
+            targetChannel = 2^parameters.channelNum;
+            if any(bitand(fullWordsTemp, targetChannel))
+                validEpochs = [validEpochs i];
+                ttlPaths{end+1} = ttlPath;
+                fprintf('Epoch %d has signal from channel %d\n', i, parameters.channelNum);
+            else
+                fprintf('Epoch %d has no signal from channel %d - skipping\n', i, parameters.channelNum);
+                continue;
+            end
+        else
+            validEpochs = [validEpochs i];
+            ttlPaths{end+1} = ttlPath;
+        end
     else
+        fprintf('No TTL data found for epoch %d - skipping\n', i);
+        continue;
+    end
+    
+    % Get probe timestamps
+    if isempty(parameters.probeLetter)
         probeStr = 'A';
+    else
+        probeStr = parameters.probeLetter;
     end
     
     timestampPath = fullfile(session.general.basePath, session.epochs{i}.name, 'continuous', ...
-        ['Neuropix-PXI-100.Probe' probeStr], 'timestamps.npy');
-    disp(['Checking timestamp path for epoch ' num2str(i) ': ' timestampPath])
+        ['Neuropix-PXI-103.Probe' probeStr], 'timestamps.npy');
     
     if ~exist(timestampPath, 'file')
         error(['Timestamp file not found for Probe' probeStr ' in epoch ' num2str(i)]);
     end
     
-    temp = readNPY(timestampPath);
-    disp(['Found ' num2str(length(temp)) ' timestamps, first value: ' num2str(temp(1))])
+    timestampData = readNPY(timestampPath);
+    epochsStartTime(end+1) = session.epochs{i}.startTime;
+    ephysT0(end+1) = double(timestampData(1));
+end
+
+openephysDig.validEpochs = validEpochs;
+
+if isempty(validEpochs)
+    error('No valid epochs found with the specified channel');
+end
+
+% Process valid epochs
+for i = 1:length(validEpochs)
+    currentEpoch = validEpochs(i);
+    basePath = fullfile(session.general.basePath, ttlPaths{i});
+    timestamps = readNPY(fullfile(basePath,'timestamps.npy'));
+    fullWords = readNPY(fullfile(basePath,'full_words.npy'));
     
-    epochs_startTime(i) = session.epochs{i}.startTime;
-    ephys_t0(i) = double(temp(1));
-    disp(['ephys_t0 for epoch ' num2str(i) ': ' num2str(ephys_t0(i))])
-end
-
-% Initialize output structure
-openephysDig = {};
-
-% Load and process first epoch data
-basePath = fullfile(session.general.basePath, TTL_paths{1});
-
-% Load raw data
-timestamps = readNPY(fullfile(basePath,'timestamps.npy'));
-disp(['Found ' num2str(length(timestamps)) ' TTL timestamps'])
-full_words = readNPY(fullfile(basePath,'full_words.npy'));
-channel_states = readNPY(fullfile(basePath,'states.npy'));
-channels = readNPY(fullfile(basePath,'sample_numbers.npy'));
-
-% Filter by channel first if specified
-if ~isempty(parameters.channelNum)
-    channel_mask = bitand(full_words, 2^parameters.channelNum) > 0;
-    timestamps = timestamps(channel_mask);
-    channel_states = channel_states(channel_mask);
-    channels = channels(channel_mask);
-    full_words = full_words(channel_mask);
-end
-
-% Then store in structure with alignment
-openephysDig.timestamps = epochs_startTime(1) + double(timestamps) - ephys_t0(1);
-openephysDig.channel_states = channel_states;
-openephysDig.channels = channels;
-openephysDig.full_words = full_words;
-
-openephysDig.on{1} = double(openephysDig.timestamps(openephysDig.channel_states == 1));
-openephysDig.off{1} = double(openephysDig.timestamps(openephysDig.channel_states == -1));
-
-% Process additional epochs if present
-if length(TTL_paths) > 1
-    openephysDig.nTimestampsPrFile(1) = numel(openephysDig.timestamps);
-    openephysDig.nOnPrFile(1) = numel(openephysDig.on{1});
-    openephysDig.nOffPrFile(1) = numel(openephysDig.off{1});
+    % Align timestamps
+    alignedTimestamps = epochsStartTime(i) + double(timestamps) - ephysT0(i);
     
-    for i = 2:length(TTL_paths)
-        basePath = fullfile(session.general.basePath, TTL_paths{i});
-
-        timestamps = readNPY(fullfile(basePath,'timestamps.npy'));
-        full_words = readNPY(fullfile(basePath,'full_words.npy'));
-        channel_states = readNPY(fullfile(basePath,'states.npy'));
-        channels = readNPY(fullfile(basePath,'sample_numbers.npy'));
-        
-        % Filter for specific channel if requested
-        if ~isempty(parameters.channelNum)
-            channel_mask = bitand(full_words, 2^parameters.channelNum) > 0;
-            timestamps = timestamps(channel_mask);
-            channel_states = channel_states(channel_mask);
-            channels = channels(channel_mask);
-            full_words = full_words(channel_mask);
-        end
-
-        timestamps = epochs_startTime(i) + double(timestamps) - ephys_t0(i);
-        
-        openephysDig.timestamps = [openephysDig.timestamps; timestamps];
-        openephysDig.channel_states = [openephysDig.channel_states; channel_states];
-        openephysDig.channels = [openephysDig.channels; channels];
-        openephysDig.full_words = [openephysDig.full_words; full_words];
-        
-        openephysDig.on{1} = [openephysDig.on{1}; double(timestamps(channel_states == 1))];
-        openephysDig.off{1} = [openephysDig.off{1}; double(timestamps(channel_states == -1))];
-        openephysDig.nTimestampsPrFile(i) = numel(timestamps);
-        openephysDig.nOnPrFile(i) = sum(channel_states == 1);
-        openephysDig.nOffPrFile(i) = sum(channel_states == -1);
-    end
+    % Get channel states using bitget
+    channel_states = bitget(fullWords, parameters.channelNum + 1);
+    
+    % Find state transitions
+    state_changes = diff([0; channel_states]);
+    rising_edges = find(state_changes == 1);
+    falling_edges = find(state_changes == 0);
+    
+    % Store timestamps for the specific channel
+    openephysDig.on{1} = [openephysDig.on{1}; alignedTimestamps(rising_edges)];
+    openephysDig.off{1} = [openephysDig.off{1}; alignedTimestamps(falling_edges)];
+    
+    % Store all timestamps and their states
+    openephysDig.timestamps = [openephysDig.timestamps; alignedTimestamps];
+    openephysDig.states = [openephysDig.states; channel_states];
+    openephysDig.epochNum = [openephysDig.epochNum; repmat(currentEpoch, length(alignedTimestamps), 1)];
 end
 
-% Attaching info about how the data was processed
+% Store processing information
 openephysDig.processinginfo.function = 'loadOpenEphysDigitalNidaq';
-openephysDig.processinginfo.version = 1;
+openephysDig.processinginfo.version = 9;
 openephysDig.processinginfo.date = datetime('now');
-openephysDig.processinginfo.params.basepath = session.general.basePath;
-openephysDig.processinginfo.params.basename = session.general.name;
-openephysDig.processinginfo.params.TTL_paths = TTL_paths;
+openephysDig.processinginfo.params = struct('basePath', session.general.basePath, ...
+    'basename', session.general.name, ...
+    'ttlPaths', {ttlPaths}, ...
+    'channelNum', parameters.channelNum);
 
-try
-    openephysDig.processinginfo.username = char(java.lang.System.getProperty('user.name'));
-    openephysDig.processinginfo.hostname = char(java.net.InetAddress.getLocalHost.getHostName);
-catch
-    disp('Failed to retrieve system info.')
-end
-
-% Saving data
+% Save the processed data
 saveStruct(openephysDig,'digitalseries','session',session);
 end
