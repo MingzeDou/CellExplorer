@@ -98,21 +98,32 @@ for i = 1:length(validEpochs)
     alignedTimestamps = epochsStartTime(i) + double(timestamps) - ephysT0(i);
     
     % Get channel states using bitget
-    channel_states = bitget(fullWords, parameters.channelNum + 1);
+    channelStates = bitget(fullWords, parameters.channelNum + 1);
     
     % Find state transitions
-    state_changes = diff([0; channel_states]);
-    rising_edges = find(state_changes == 1);
-    falling_edges = find(state_changes == 0);
+    stateChanges = diff([0; channelStates]);
+    risingEdges = find(stateChanges == 1);
+    fallingEdges = find(stateChanges == 0);
+    
+    % Remove duplicate timestamps from rising edges
+    [uniqueRisingTimestamps, uniqueRisingIdx] = unique(alignedTimestamps(risingEdges));
+    risingEdges = risingEdges(uniqueRisingIdx);
+    
+    % Remove duplicate timestamps from falling edges
+    [uniqueFallingTimestamps, uniqueFallingIdx] = unique(alignedTimestamps(fallingEdges));
+    fallingEdges = fallingEdges(uniqueFallingIdx);
     
     % Store timestamps for the specific channel
-    openephysDig.on{1} = [openephysDig.on{1}; alignedTimestamps(rising_edges)];
-    openephysDig.off{1} = [openephysDig.off{1}; alignedTimestamps(falling_edges)];
+    openephysDig.on{1} = [openephysDig.on{1}; uniqueRisingTimestamps];
+    openephysDig.off{1} = [openephysDig.off{1}; uniqueFallingTimestamps];
     
-    % Store all timestamps and their states
-    openephysDig.timestamps = [openephysDig.timestamps; alignedTimestamps];
-    openephysDig.states = [openephysDig.states; channel_states];
-    openephysDig.epochNum = [openephysDig.epochNum; repmat(currentEpoch, length(alignedTimestamps), 1)];
+    % Store only unique state changes
+    changeIndices = sort([risingEdges; fallingEdges]);
+    [uniqueChangeTimestamps, uniqueIdx] = unique(alignedTimestamps(changeIndices));
+    
+    openephysDig.timestamps = [openephysDig.timestamps; uniqueChangeTimestamps];
+    openephysDig.states = [openephysDig.states; channelStates(changeIndices(uniqueIdx))];
+    openephysDig.epochNum = [openephysDig.epochNum; repmat(currentEpoch, length(uniqueChangeTimestamps), 1)];
 end
 
 % Store processing information
