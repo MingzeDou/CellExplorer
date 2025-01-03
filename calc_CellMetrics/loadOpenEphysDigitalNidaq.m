@@ -1,4 +1,44 @@
 function openephysDig = loadOpenEphysDigitalNidaq(session, varargin)
+% loadOpenEphysDigitalNidaq - Load and process digital TTL signals from OpenEphys NI-DAQ Board
+%
+% This function processes TTL signals recorded by the NI-DAQ board in OpenEphys, handling
+% multiple recording epochs and aligning timestamps to the probe's timeline.
+%
+% INPUTS:
+%   session        - Session struct containing recording metadata and paths
+%
+% Optional Name-Value Pairs:
+%   'channelNum'   - Integer. Channel number on NI-DAQ board to process
+%                    0: Clock signal (1 Hz)
+%                    1: Camera trigger (120 Hz)
+%                    Default: [] (processes all channels)
+%   'probeLetter'  - Character. Specifies which probe's timeline to use for alignment
+%                    'A': Use ProbeA timestamps (default)
+%                    'B': Use ProbeB timestamps
+%
+% OUTPUTS:
+%   openephysDig   - Structure containing processed TTL data with fields:
+%     .timestamps  - [Nx1] Vector of all event timestamps (in seconds)
+%     .states      - [Nx1] Vector of binary states (0/1) for each timestamp
+%     .epochNum    - [Nx1] Vector indicating the epoch number for each timestamp
+%     .on          - {1x1} Cell containing timestamps of rising edges (0→1)
+%     .off         - {1x1} Cell containing timestamps of falling edges (1→0)
+%     .diagnostics - Structure containing timing analysis and data quality info
+%
+% NOTES:
+%   - Rising and falling edges are paired based on channel-specific transitions
+%   - Timestamps are aligned to probe recording start time
+%   - Function warns if rising edges lack corresponding falling edges
+%   - Empty epochs or missing files are handled gracefully with warnings
+%
+% EXAMPLE:
+%   % Load camera trigger signals from channel 1
+%   ttl = loadOpenEphysDigitalNidaq(session, 'channelNum', 1)
+%
+% See also: readNPY, saveStruct
+%
+% By Mingze Dou
+
 p = inputParser;
 addParameter(p,'channelNum', [], @isnumeric);
 addParameter(p,'probeLetter', 'A', @ischar);
