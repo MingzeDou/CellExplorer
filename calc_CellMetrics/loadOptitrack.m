@@ -141,9 +141,30 @@ optitrack.position.coordinateSystem = 'cartesian';
 optitrack.speed = animal_speed;  % Original speed
 optitrack.smoothedSpeed = smoothed_speed;  % Added smoothed speed
 optitrack.acceleration = animal_acceleration;
-optitrack.orientation.x = optitrack_temp.Xr;
-optitrack.orientation.y = optitrack_temp.Yr;
-optitrack.orientation.z = optitrack_temp.Zr;
+optitrack.orientation.x = -optitrack_temp.Xr;
+optitrack.orientation.y = optitrack_temp.Zr;
+optitrack.orientation.z = optitrack_temp.Yr;
+optitrack.orientation.w = optitrack_temp.Wr;
+% Create rotation matrix from quaternion components
+R11 = 1 - 2*(optitrack.orientation.y.^2 + optitrack.orientation.z.^2);
+R12 = 2*(optitrack.orientation.x.*optitrack.orientation.y - optitrack.orientation.w.*optitrack.orientation.z);
+R21 = 2*(optitrack.orientation.x.*optitrack.orientation.y + optitrack.orientation.w.*optitrack.orientation.z);
+R22 = 1 - 2*(optitrack.orientation.x.^2 + optitrack.orientation.z.^2);
+
+% Calculate forward direction vector (use first column of rotation matrix)
+% This represents where the animal is facing
+forward_x = R11;
+forward_y = R21;
+
+% Calculate heading as angle in the XY plane
+heading = atan2(forward_y, forward_x);
+
+% Rotate heading 90 degrees counterclockwise (add pi/2)
+heading_rotated = heading + (pi/2);
+
+% Wrap to pi range
+optitrack.orientation.heading = wrapToPi(heading_rotated);
+
 optitrack.orientation.rotationType = optitrack_temp.RotationType;
 optitrack.nSamples = numel(optitrack.timestamps);
 
