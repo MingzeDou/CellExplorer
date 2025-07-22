@@ -11102,9 +11102,9 @@ end
                         case 'tSNE'
                             if strcmp(preferences.InitialY,'PCA space')
                                 initPCA = pca(X,'NumComponents',2);
-                                tSNE_metrics.plot = tsne(X',[],2);
+                                tSNE_metrics.plot = tsne(X','Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',preferences.NumPCAComponents,'Perplexity',preferences.Perplexity,'InitialY',initPCA,'LearnRate',preferences.LearnRate);
                             else
-                                tSNE_metrics.plot = tsne(X',[],2);
+                                tSNE_metrics.plot = tsne(X','Standardize',preferences.standardize,'Distance',preferences.dDistanceMetric,'Exaggeration',preferences.exaggeration,'NumPCAComponents',min(size(X,1),preferences.NumPCAComponents),'Perplexity',min(size(X,2),preferences.Perplexity),'LearnRate',preferences.LearnRate);
                             end
                             
                         case 'UMAP'
