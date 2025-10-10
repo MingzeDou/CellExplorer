@@ -68,25 +68,47 @@ openephysDig.diagnostics = struct();
 
 % Find valid epochs
 for i = 1:numel(session.epochs)
-    ttlPath = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-116.PXIe-6341', 'TTL');
+    path1 = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-116.PXIe-6341', 'TTL');
+    path2 = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-108.PXIe-6341', 'TTL');
+
+    if exist(path1, 'dir')
+        ttlPath = path1;
+    elseif exist(path2, 'dir')
+        ttlPath = path2;
+    else
+        ttlPath = ''; % or throw an error if neither exists
+    end
+
     fullWordsPath = fullfile(session.general.basePath, ttlPath, 'full_words.npy');
-    
+
     if exist(fullWordsPath, 'file') && (~isempty(parameters.channelNum) && ...
             any(bitand(readNPY(fullWordsPath), 2^parameters.channelNum)) || isempty(parameters.channelNum))
         validEpochs = [validEpochs i];
         ttlPaths{end+1} = ttlPath;
-        
+
         % Get probe timestamps
         probeStr = parameters.probeLetter;
         if ~isempty(parameters.probeLetter), probeStr = parameters.probeLetter; end
-        
-        timestampPath = fullfile(session.general.basePath, session.epochs{i}.name, 'continuous', ...
+
+        path1 = fullfile(session.general.basePath, session.epochs{i}.name, 'continuous', ...
             ['Neuropix-PXI-103.Probe' probeStr], 'timestamps.npy');
-        
+
+        path2 = fullfile(session.general.basePath, session.epochs{i}.name, 'continuous', ...
+            ['Neuropix-PXI-100.Probe' probeStr], 'timestamps.npy');
+
+        if exist(path1, 'file')
+            timestampPath = path1;
+        elseif exist(path2, 'file')
+            timestampPath = path2;
+        else
+            error('No timestamps.npy found for Probe %s in epoch %s', probeStr, session.epochs{i}.name);
+        end
+
+
         if ~exist(timestampPath, 'file')
             error(['Timestamp file not found for Probe' probeStr ' in epoch ' num2str(i)]);
         end
-        
+
         timestampData = readNPY(timestampPath);
         epochsStartTime(end+1) = session.epochs{i}.startTime;
         ephysT0(end+1) = double(timestampData(1));

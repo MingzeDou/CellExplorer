@@ -121,7 +121,7 @@ animal_speed = [optitrack_temp.FrameRate*sqrt(sum(diff(position3D)'.^2)),0];
 animal_speed = nanconv(animal_speed,ones(1,10)/10,'edge');  % Original smoothing
 
 % Additional smoothing with larger window
-window_size = 80;
+window_size = 25;
 smoothed_speed = nanconv(animal_speed, ones(1,window_size)/window_size, 'edge');
 animal_acceleration = [0,optitrack_temp.FrameRate*diff(smoothed_speed)];
 
@@ -203,7 +203,7 @@ if parameters.plotFig
     % plot3(position3D(:,1),position3D(:,2),position3D(:,3)), title('Position'), xlabel('X (cm)'), ylabel('Y (cm)'), zlabel('Z (cm)'),axis tight, view(2), hold on
     plot3(position3D(:,1),position3D(:,2),position3D(:,3)), title('Position'), xlabel('X (cm)'), ylabel('Y (cm)'), zlabel('Z (cm)'),axis tight, hold on
     subplot(1,2,2)
-    plot3(position3D(:,1),position3D(:,2),animal_speed), hold on
+    plot3(position3D(:,1),position3D(:,2),smoothed_speed), hold on
     xlabel('X (cm)'), ylabel('Y (cm)'),zlabel('Speed (cm/s)'), axis tight
     
     % Saving a summary figure for all cells
