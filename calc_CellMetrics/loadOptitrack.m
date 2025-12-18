@@ -107,6 +107,76 @@ end
 clear dataArray
 clearvars filename formatSpec fileID dataArray header_length;
 
+%% ========== NaN INTERPOLATION FOR POSITION DATA ==========
+fprintf('\n=== Position NaN Detection & Interpolation ===\n');
+
+% Check for NaN values
+nan_X = isnan(optitrack_temp.X);
+nan_Y = isnan(optitrack_temp.Y);
+nan_Z = isnan(optitrack_temp.Z);
+nan_any = nan_X | nan_Y | nan_Z;
+
+fprintf('NaN counts before interpolation:\n');
+fprintf('  X: %d (%.2f%%)\n', sum(nan_X), 100*sum(nan_X)/length(nan_X));
+fprintf('  Y: %d (%.2f%%)\n', sum(nan_Y), 100*sum(nan_Y)/length(nan_Y));
+fprintf('  Z: %d (%.2f%%)\n', sum(nan_Z), 100*sum(nan_Z)/length(nan_Z));
+
+if any(nan_any)
+    % Create valid data mask
+    valid_mask = ~nan_any;
+    valid_indices = find(valid_mask);
+    
+    if sum(valid_mask) > 10  % Need at least 10 valid points to interpolate
+        % Interpolate position data using linear interpolation
+        optitrack_temp.X = interp1(valid_indices, optitrack_temp.X(valid_mask), ...
+            1:length(optitrack_temp.X), 'linear', 'extrap')';
+        optitrack_temp.Y = interp1(valid_indices, optitrack_temp.Y(valid_mask), ...
+            1:length(optitrack_temp.Y), 'linear', 'extrap')';
+        optitrack_temp.Z = interp1(valid_indices, optitrack_temp.Z(valid_mask), ...
+            1:length(optitrack_temp.Z), 'linear', 'extrap')';
+        
+        % For orientation quaternions - interpolate and renormalize
+        nan_quat = isnan(optitrack_temp.Xr) | isnan(optitrack_temp.Yr) | ...
+                   isnan(optitrack_temp.Zr) | isnan(optitrack_temp.Wr);
+        
+        if any(nan_quat)
+            valid_quat_mask = ~nan_quat;
+            valid_quat_indices = find(valid_quat_mask);
+            
+            if sum(valid_quat_mask) > 10
+                optitrack_temp.Xr = interp1(valid_quat_indices, optitrack_temp.Xr(valid_quat_mask), ...
+                    1:length(optitrack_temp.Xr), 'linear', 'extrap')';
+                optitrack_temp.Yr = interp1(valid_quat_indices, optitrack_temp.Yr(valid_quat_mask), ...
+                    1:length(optitrack_temp.Yr), 'linear', 'extrap')';
+                optitrack_temp.Zr = interp1(valid_quat_indices, optitrack_temp.Zr(valid_quat_mask), ...
+                    1:length(optitrack_temp.Zr), 'linear', 'extrap')';
+                optitrack_temp.Wr = interp1(valid_quat_indices, optitrack_temp.Wr(valid_quat_mask), ...
+                    1:length(optitrack_temp.Wr), 'linear', 'extrap')';
+                
+                % Normalize quaternions after interpolation
+                quat_norm = sqrt(optitrack_temp.Xr.^2 + optitrack_temp.Yr.^2 + ...
+                               optitrack_temp.Zr.^2 + optitrack_temp.Wr.^2);
+                optitrack_temp.Xr = optitrack_temp.Xr ./ quat_norm;
+                optitrack_temp.Yr = optitrack_temp.Yr ./ quat_norm;
+                optitrack_temp.Zr = optitrack_temp.Zr ./ quat_norm;
+                optitrack_temp.Wr = optitrack_temp.Wr ./ quat_norm;
+                
+                fprintf('  ✓ Quaternion orientation interpolated\n');
+            end
+        end
+        
+        % Verify interpolation removed NaNs
+        remaining_nans = sum(isnan(optitrack_temp.X) | isnan(optitrack_temp.Y) | isnan(optitrack_temp.Z));
+        fprintf('✓ Position interpolation complete: %d NaNs remaining\n', remaining_nans);
+    else
+        warning('Too few valid data points (%d) to interpolate NaNs', sum(valid_mask));
+    end
+else
+    fprintf('✓ No NaNs detected - data is clean\n');
+end
+
+%% ========== END NaN INTERPOLATION ==========
+
 % getting position out in cm, and flipping Z and Y axis
 position3D = 100*[-optitrack_temp.X,optitrack_temp.Z,optitrack_temp.Y]*parameters.scaling_factor + parameters.offset_origin;
 

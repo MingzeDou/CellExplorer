@@ -70,11 +70,14 @@ openephysDig.diagnostics = struct();
 for i = 1:numel(session.epochs)
     path1 = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-116.PXIe-6341', 'TTL');
     path2 = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-108.PXIe-6341', 'TTL');
+    path3 = fullfile(session.epochs{i}.name, 'events', 'NI-DAQmx-107.PXIe-6341', 'TTL');
 
     if exist(path1, 'dir')
         ttlPath = path1;
     elseif exist(path2, 'dir')
         ttlPath = path2;
+    elseif exist(path3, 'dir')
+        ttlPath = path3;
     else
         ttlPath = ''; % or throw an error if neither exists
     end
