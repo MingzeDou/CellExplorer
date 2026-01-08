@@ -8,14 +8,14 @@ cd(basepath)
 
 % Load session and tracking data
 sessionA = loadSession(basepath,[basename '_ProbeA'],'showGUI',false);
-sessionA = loadOpenEphysSettingsFile(fullfile(sessionA.general.basePath, 'structure.oebin'), sessionA, 'probeLetter', 'B');
+sessionA = loadOpenEphysSettingsFile(fullfile(sessionA.general.basePath, 'structure.oebin'), sessionA, 'probeLetter', 'A');
 session = sessionA;
 % saveStruct(session);
 
-sessionA = preprocessOpenEphysData('session', session, 'probeLetter', 'B');
+sessionA = preprocessOpenEphysData('session', session, 'probeLetter', 'A');
 
 % Load digital pulses
-openephysDigB = loadOpenEphysDigitalNidaq(sessionA, 'probeLetter', 'B', 'channelNum', 1);
+openephysDigB = loadOpenEphysDigitalNidaq(sessionA, 'probeLetter', 'A', 'channelNum', 1);
 
 % Load and align behavior session, Probe A, epoch 2
 epochToProcess = 2;
@@ -26,7 +26,7 @@ offset_origin = [5,-5,0];
 offset_rigid_body = [5,-5,0];
 
 % Load tracking data
-sessionA.behavioralTracking{1}.filenames = 'Take 2025-12-21 12.36.22 PM.csv';
+sessionA.behavioralTracking{1}.filenames = '\yourBehaviorFile';
 sessionA.behavioralTracking{1}.epoch = epochToProcess;
 sessionA.behavioralTracking{1}.framerate = 120;
 
